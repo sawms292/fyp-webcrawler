@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ProgressBar?>
+<?import javafx.scene.control.Spinner?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<AnchorPane prefHeight="600.0" prefWidth="900.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.saw.webcrawler.MainPage">
+    <children>
+        <AnchorPane prefWidth="50.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.topAnchor="0.0">
+            <children>
+                <VBox alignment="CENTER" spacing="30.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                    <children>
+                        <ImageView fx:id="home" fitHeight="30.0" fitWidth="30.0" onMouseClicked="#homeClick" pickOnBounds="true" preserveRatio="true">
+                            <image>
+                                <Image url="@../../../icon/HomeSelected.png" />
+                            </image>
+                        </ImageView>
+                        <ImageView fx:id="database" fitHeight="30.0" fitWidth="30.0" onMouseClicked="#databaseClick" pickOnBounds="true" preserveRatio="true">
+                            <image>
+                                <Image url="@../../../icon/Database.png" />
+                            </image>
+                        </ImageView>
+                        <ImageView fx:id="settings" fitHeight="30.0" fitWidth="30.0" onMouseClicked="#settingsClick" pickOnBounds="true" preserveRatio="true">
+                            <image>
+                                <Image url="@../../../icon/Settings.png" />
+                            </image>
+                        </ImageView>
+                    </children>
+                </VBox>
+            </children>
+        </AnchorPane>
+        <VBox alignment="CENTER" prefWidth="800.0" spacing="10.0" AnchorPane.bottomAnchor="20.0" AnchorPane.leftAnchor="70.0" AnchorPane.rightAnchor="20.0" AnchorPane.topAnchor="20.0">
+            <children>
+                <Label fx:id="titileLbl" style="-fx-font-size: 18; -fx-font-weight: bold;" text="Web Crawler" />
+                <TextField fx:id="keywordFld" promptText="Enter one keyword" />
+                <TextField fx:id="urlFld" promptText="Enter one URL want to crawl" />
+                <HBox alignment="CENTER_LEFT" prefHeight="30.0" style="-fx-background-color: lightgray;">
+                    <padding>
+                        <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                    </padding>
+                    <children>
+                        <Label fx:id="statusLbl" style="-fx-font-size: 13; -fx-font-weight: bold;" text="Status: Null" />
+                    </children>
+                </HBox>
+                <ProgressBar fx:id="progressBar" maxWidth="1.7976931348623157E308" prefWidth="800.0" progress="0.0" />
+                <HBox spacing="10.0">
+                    <children>
+                        <Button fx:id="startBtn" mnemonicParsing="false" onAction="#startCrawlingBtn" style="-fx-background-color: lightgreen;" text="Start" />
+                        <Button fx:id="stopBtn" disable="true" mnemonicParsing="false" onAction="#stopCrawlingBtn" text="Stop" />
+                  <Button fx:id="clearBtn" mnemonicParsing="false" onAction="#clearTextBtn" style="-fx-background-color: lightblue;" text="Clear" />
+                  <Spinner fx:id="numberSp" prefHeight="26.0" prefWidth="96.0" />
+                    </children>
+                </HBox>
+                <Label fx:id="outputLbl" style="-fx-font-size: 18; -fx-font-weight: bold;" text="Result:" />
+<!--                <TextArea fx:id="outputArea" editable="false" prefHeight="300.0" wrapText="true" />-->
+                <TableView fx:id="dbTable" prefHeight="300.0" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="colNo" prefWidth="40" text="No." />
+                        <TableColumn fx:id="colKeyword" prefWidth="171.2" text="Keyword" />
+                        <TableColumn fx:id="colTimes" prefWidth="75.2" text="Times" />
+                        <TableColumn fx:id="colLink" prefWidth="366.39996337890625" text="Link" />
+                        <TableColumn fx:id="colDate" prefWidth="156.0" text="Crawl Time" />
+                    </columns>
+                </TableView>
+            </children>
+        </VBox>
+    </children>
+</AnchorPane>

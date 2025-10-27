@@ -1,0 +1,12 @@
+/custom-runtime/
+/WebCrawler-*.exe
+/src/main/resources/bin/
+*.exe
+*.dll
+*.lib
+*.dat
+*.jar
+*.class
+/target/
+/build/
+/out/

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<AnchorPane xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.saw.webcrawler.DatabasePage">
+
+    <children>
+        <AnchorPane prefWidth="50.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.topAnchor="0.0">
+            <children>
+                <VBox alignment="CENTER" spacing="30.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                    <children>
+                        <ImageView fx:id="home" fitHeight="30.0" fitWidth="30.0" onMouseClicked="#homeClick" pickOnBounds="true" preserveRatio="true">
+                            <image>
+                                <Image url="@../../../icon/Home.png" />
+                            </image>
+                        </ImageView>
+                        <ImageView fx:id="database" fitHeight="30.0" fitWidth="30.0" onMouseClicked="#databaseClick" pickOnBounds="true" preserveRatio="true">
+                            <image>
+                                <Image url="@../../../icon/DatabaseSelected.png" />
+                            </image>
+                        </ImageView>
+                        <ImageView fx:id="settings" fitHeight="30.0" fitWidth="30.0" onMouseClicked="#settingsClick" pickOnBounds="true" preserveRatio="true">
+                            <image>
+                                <Image url="@../../../icon/Settings.png" />
+                            </image>
+                        </ImageView>
+                    </children>
+                </VBox>
+            </children>
+        </AnchorPane>
+
+        <VBox alignment="TOP_CENTER" spacing="10.0" AnchorPane.bottomAnchor="20.0" AnchorPane.leftAnchor="70.0" AnchorPane.rightAnchor="20.0" AnchorPane.topAnchor="20.0">
+
+            <children>
+                <Label fx:id="dbTitleLbl" style="-fx-font-size: 18; -fx-font-weight: bold;" text="Database Record" />
+
+                <HBox alignment="CENTER" spacing="10.0">
+                    <children>
+                        <ComboBox fx:id="monthCb" prefWidth="150.0" promptText="Select Month" />
+                        <TextField fx:id="dbSearchFld" alignment="CENTER" promptText="Search by keyword" HBox.hgrow="ALWAYS" />
+                        <Button fx:id="dbSearchBtn" onAction="#searchDatabase" text="Search" />
+                    </children>
+                </HBox>
+
+                <Label fx:id="resultDbLbl" style="-fx-font-size: 18; -fx-font-weight: bold;" text="Record Result">
+                    <VBox.margin>
+                        <Insets top="10.0" />
+                    </VBox.margin>
+                </Label>
+
+                <TableView fx:id="dbTable" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="colNo" prefWidth="40" text="No." />
+                        <TableColumn fx:id="colKeyword" prefWidth="171.2" text="Keyword" />
+                        <TableColumn fx:id="colTimes" prefWidth="75.2" text="Times" />
+                        <TableColumn fx:id="colLink" prefWidth="324.8" text="Link" />
+                        <TableColumn fx:id="colFound" prefWidth="72.0" text="Found" />
+                        <TableColumn fx:id="colDate" prefWidth="125.6" text="Crawl Time" />
+                    </columns>
+                </TableView>
+            </children>
+        </VBox>
+    </children>
+</AnchorPane>
