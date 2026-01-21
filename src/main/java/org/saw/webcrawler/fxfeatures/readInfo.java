@@ -2,7 +2,6 @@ package org.saw.webcrawler.fxfeatures;
 import java.io.File;
 import java.lang.management.ManagementFactory;
 
-import com.mysql.cj.protocol.x.XMessage;
 import com.sun.management.OperatingSystemMXBean;
 
 import java.util.ArrayList;
@@ -15,33 +14,51 @@ import javax.mail.internet.MimeMessage;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 
+/**
+ * Class for collecting runtime logs, generating a timestmap prefix, gathering system information,
+ * sending a bug report email
+ */
 public class readInfo {
     public static ArrayList<String> logs = new ArrayList<String>();
 
+    /**
+     * Using local system time create timestamp prefix
+     * @return formatted timestamp prefix
+     */
     public static String timestamp(){
         LocalTime now = LocalTime.now();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
         return now.format(formatter) + "-> ";
     }
+
+    /**
+     * Wrap the logs into an HTML ordered list
+     * When email is sent, the log buffer will clear
+     * This method include the SMTP and StartTLS settings for email sending
+     * @param messagess caller-provided message to include in email body
+     * @return boolean -> true if email sent successfully
+     */
     public boolean sendMessage(String messagess) {
         String joinString = "";
         String result = "";
         if(!logs.isEmpty()){
-            //resource from online/chatgpt https://stackoverflow.com/questions/1751844/java-convert-liststring-to-a-joind-string
+            //resource from https://stackoverflow.com/questions/1751844/java-convert-liststring-to-a-joind-string
              joinString = logs.stream()
-                    .map(log -> "<li>" + log + "</li>")  // Wrap each log with <li> tags
-                    .collect(Collectors.joining("<br>"));  // Join with <br> (optional, depending on desired formatting)
-
-            result = "<ol>" + joinString + "</ol>";  // Wrap the entire string in <ol> tags
+                     // Wrap each log with <li> tags
+                    .map(log -> "<li>" + log + "</li>")
+                    .collect(Collectors.joining("<br>"));  // Join with <br>
+            // Wrap the entire string in <ol> tags
+            result = "<ol>" + joinString + "</ol>";
             System.out.println(result);
         }
-        final String fromemail ="sheng00.ms@gmail.com";
-        final String password ="xqpc sgue piyo gati";
-        final String toemail ="sheng000.ms@gmail.com";
+        // Email configuration
+        final String fromemail =""; //stmp email here
+        final String password =""; //smtp email password here
+        final String toemail =""; //recipient email here
         String messages = messagess + systemInfo() + "\nBelow is logs:\n" + result;
         System.out.println("Email Start" + System.currentTimeMillis());
         Properties props = new Properties();
-        props.put("mail.smtp.host", "smtp.gmail.com"); //SMTP Host
+        props.put("mail.smtp.host", ""); //SMTP Host
         props.put("mail.smtp.port", "587"); //TLS Port
         props.put("mail.smtp.auth", "true"); //enable authentication
         props.put("mail.smtp.starttls.enable", "true"); //enable STARTTLS
@@ -54,12 +71,13 @@ public class readInfo {
         Session session = Session.getInstance(props, auth);
         try {
             Message message = new MimeMessage(session);
-            message.setFrom(new InternetAddress(fromemail));
+            message.setFrom(new InternetAddress(""));//change to your desired no-reply email
             message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(toemail));
             message.setSubject("Check Bug Report");
             message.setContent(messages, "text/html; charset=utf-8");
             Transport.send(message);
-            System.out.println("readInfo file: Email Sent" + System.currentTimeMillis());
+            System.out.println("readInfo file: Email Sent - Time: " + System.currentTimeMillis());
+            //clear the logs after sending email
             logs.clear();
             return true;
         } catch (MessagingException e) {
@@ -68,6 +86,10 @@ public class readInfo {
         }
     }
 
+    /**
+     * Gather system information including OS, CPU, Memory, Storage, and User Directories
+     * @return HTML formatted include the system info
+     */
     public static String systemInfo(){
         File logFile;
         OperatingSystemMXBean os = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
@@ -145,6 +167,7 @@ public class readInfo {
                 .append("</table>")
                 //End of User Directory
                 .append("</body></html>");
+        readInfo.logs.add(readInfo.timestamp() + "readInfo system: Success read\n");
         return sb.toString();
     }
 

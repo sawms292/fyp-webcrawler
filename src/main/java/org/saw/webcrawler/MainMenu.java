@@ -1,66 +1,55 @@
 package org.saw.webcrawler;
 
-import com.jthemedetecor.OsThemeDetector;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
-import org.saw.webcrawler.fxfeatures.AutoShutDown;
-import org.saw.webcrawler.fxfeatures.CloudflaredConnection;
 import org.saw.webcrawler.fxfeatures.ThemeChecking;
-
 
 import java.io.IOException;
 
+/**
+ * Main entry point for the Web Crawler JavaFX application
+ */
 public class MainMenu extends Application {
     private static Scene MainPageScene;
     private static Scene DatabasePageScene;
     private static Scene SettingsPageScene;
 
-    public static Scene getMainPageScene(){
+    public static Scene getMainPageScene() {
         return MainPageScene;
     }
 
-    public static Scene getDatabasePageScene(){
+    public static Scene getDatabasePageScene() {
         return DatabasePageScene;
     }
 
-    public static Scene getSettingsPageScene(){
+    public static Scene getSettingsPageScene() {
         return SettingsPageScene;
     }
 
-
+    /**
+     * @param stage the primary stage for this application
+     * @throws IOException if an FXML file cannot be loaded
+     */
     @Override
-    public void start(Stage stage) throws IOException, InterruptedException {
+    public void start(Stage stage) throws IOException {
         MainPageScene = new Scene(new FXMLLoader(MainMenu.class.getResource("/org/saw/webcrawler/MainPage.fxml")).load());
-        DatabasePageScene =new Scene(new FXMLLoader(MainMenu.class.getResource("/org/saw/webcrawler/DatabasePage.fxml")).load());
-        SettingsPageScene =new Scene(new FXMLLoader(MainMenu.class.getResource("/org/saw/webcrawler/SettingsPage.fxml")).load());
-//        FXMLLoader fxmlLoader = new FXMLLoader(MainMenu.class.getResource("MainPage.fxml"));
-//        Scene scene = new Scene(fxmlLoader.load());
-        ThemeChecking.applyTheme(MainPageScene);
+        DatabasePageScene = new Scene(new FXMLLoader(MainMenu.class.getResource("/org/saw/webcrawler/DatabasePage.fxml")).load());
+        SettingsPageScene = new Scene(new FXMLLoader(MainMenu.class.getResource("/org/saw/webcrawler/SettingsPage.fxml")).load());
+        stage.setTitle("Web Crawler");
+        stage.getIcons().add(new javafx.scene.image.Image(getClass().getResourceAsStream("/icon/favicon-32x32.png")));
         boolean wasMaximized = stage.isMaximized();
         stage.setScene(MainPageScene);
         stage.setMaximized(wasMaximized);
         stage.show();
-
-        if(!CloudflaredConnection.tunnelExists()){
-            CloudflaredConnection.getTunnelDirectoryAndRun();
-        }
-
-//        https://www.youtube.com/watch?v=TdqI-hbuWx4
-        stage.setOnCloseRequest(event -> {
-            new Thread(() -> {
-                CloudflaredConnection.turnOffProcess();
-                System.out.println("MainMenu file: Closing");
-            }, "Tunnel-Shutdown-Thread").start();
-        });
-//         JVM shutdown hook (handles Ctrl+C, system shutdown, or crash)
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            CloudflaredConnection.turnOffProcess();
-            System.out.println("MainMenu file: Closing (via JVM shutdown hook)");
-        }, "Tunnel-Shutdown-Hook"));
+        ThemeChecking.applyTheme(MainPageScene);
     }
 
+    /**
+     *  Launches the JavaFX application
+     * @param args command-line arguments
+     */
     public static void main(String[] args) {
         launch();
     }

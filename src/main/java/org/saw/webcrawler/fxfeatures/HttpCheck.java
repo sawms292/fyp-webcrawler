@@ -3,6 +3,7 @@ package org.saw.webcrawler.fxfeatures;
 //https://stackoverflow.com/questions/66325516/how-to-follow-through-on-http-303-status-code-when-using-httpclient-in-java-11-a
 
 import org.openqa.selenium.PageLoadStrategy;
+import org.openqa.selenium.Point;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
@@ -20,7 +21,14 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * To verify the accessibility of a given URL via HTTP/HTTPS before crawling
+ */
 public class HttpCheck {
+    /**
+     * @param url url to be checked
+     * @return true if accessible, else false help to prevent crawling inaccessible URLs
+     */
     public boolean checkAccess(String url) {
         //if null
         if(url == null || url.isEmpty()) {
@@ -67,6 +75,17 @@ public class HttpCheck {
 
             if (uri.getScheme() == null) {
                 throw new IllegalArgumentException("Missing scheme: " + endPoint);
+            }
+
+            if (!ok) {
+                // Try selenium as a fallback for anything 4xx/5xx
+                if (checkWithSelenium(url)) {
+                    System.out.println("Using Selenium success check http");
+                    return true;
+                } else {
+                    System.out.println("HttpCheck: GET fallback → " + code + " for " + endPoint + " → returning false (even Selenium failed)");
+                    return false;
+                }
             }
 
             if(code == 403) {
@@ -117,6 +136,11 @@ public class HttpCheck {
         }
     }
 
+    /**
+     * Used when normal HTTP checks fail, to see if Selenium can access the URL
+     * @param url url to be checked
+     * @return true if accessible via Selenium, else false
+     */
     private boolean checkWithSelenium(String url) {
             try{
                 Map<String, Object> profile = new HashMap<>();
@@ -124,8 +148,32 @@ public class HttpCheck {
                 Map<String, Object> contentSettings = new HashMap<>();
                 prefs.put("profile.managed_default_content_settings.javascript", 1);
                 ChromeOptions options = new ChromeOptions();
+                //  https://petertc.medium.com/pro-tips-for-selenium-setup-1855a11f88f8
+//  https://scrapeops.io/selenium-web-scraping-playbook/python-selenium-block-images-resources/
+//  Javascript
+                prefs.put("profile.managed_default_content_settings.javascript", 1);
+//  images
+//            prefs.put("profile.managed_default_content_settings.images",2);
+                options.addArguments("--blink-settings=imagesEnabled=false");
+//  plugins
+                prefs.put("profile.managed_default_content_settings.plugins", 2);
+//  popups
+                prefs.put("profile.managed_default_content_settings.popups", 2);
+//  notifications
+                prefs.put("profile.managed_default_content_settings.notifications", 2);
+//  geolocation
+                prefs.put("profile.managed_default_content_settings.geolocation", 2);
+//  media_stream
+                prefs.put("profile.managed_default_content_settings.media_stream", 2);
+//  fonts
+                prefs.put("profile.managed_default_content_settings.fonts", 2);
+//  stylesheets
+                prefs.put("profile.managed_default_content_settings.stylesheets", 2);
+                contentSettings.put("profile.default_content_setting_values.cookies", 1);
+                profile.put("managed_default_content_settings", contentSettings);
 //  Headless
-//                options.addArguments("--headless");
+//                options.addArguments("--headless=new");
+                options.addArguments("--window-size=1000,800");
 //  Pretend to be a normal Chrome
                 options.addArguments("--disable-blink-features=AutomationControlled");
 //  Use real user profile
@@ -144,6 +192,10 @@ public class HttpCheck {
                 prefs.put("profile", profile);
                 options.setExperimentalOption("prefs", prefs);
                 WebDriver driver = new ChromeDriver(options);
+//                try {
+                    driver.manage().window().setPosition(new Point(-2000, 0));
+//                    driver.manage().window().minimize();
+//                } catch (Exception ignore) {}
                 driver.get(url);
                 String title = driver.getTitle();
                 String html = driver.getPageSource();
@@ -159,6 +211,9 @@ public class HttpCheck {
         }
 
 
+    /**
+     * @return simple test to check internet connection availability
+     */
     //    https://www.youtube.com/watch?v=FCZ28hSxL0U
     public boolean testConnection(){
         try{
@@ -174,4 +229,5 @@ public class HttpCheck {
             return false;
         }
     }
+
 }

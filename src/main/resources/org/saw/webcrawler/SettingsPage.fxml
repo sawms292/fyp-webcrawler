@@ -5,97 +5,107 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.RadioButton?>
 <?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.ToggleGroup?>
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.RowConstraints?>
 <?import javafx.scene.layout.VBox?>
 
 <AnchorPane prefHeight="600.0" prefWidth="900.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.saw.webcrawler.SettingsPage">
+
     <children>
+
+        <!-- Left rail -->
         <AnchorPane prefWidth="50.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.topAnchor="0.0">
             <children>
                 <VBox alignment="CENTER" spacing="30.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                     <children>
                         <ImageView fx:id="home" fitHeight="30.0" fitWidth="30.0" onMouseClicked="#homeClick" pickOnBounds="true" preserveRatio="true">
-                            <image>
-                                <Image url="@../../../icon/Home.png" />
-                            </image>
+                            <image><Image url="@../../../icon/Home.png" /></image>
                         </ImageView>
                         <ImageView fx:id="database" fitHeight="30.0" fitWidth="30.0" onMouseClicked="#databaseClick" pickOnBounds="true" preserveRatio="true">
-                            <image>
-                                <Image url="@../../../icon/Database.png" />
-                            </image>
+                            <image><Image url="@../../../icon/Database.png" /></image>
                         </ImageView>
                         <ImageView fx:id="settings" fitHeight="30.0" fitWidth="30.0" onMouseClicked="#settingsClick" pickOnBounds="true" preserveRatio="true">
-                            <image>
-                                <Image url="@../../../icon/SettingsSelected.png" />
-                            </image>
+                            <image><Image url="@../../../icon/Settings.png" /></image>
                         </ImageView>
                     </children>
                 </VBox>
             </children>
         </AnchorPane>
-      <VBox alignment="CENTER" prefHeight="200.0" prefWidth="100.0" AnchorPane.bottomAnchor="20.0" AnchorPane.leftAnchor="70.0" AnchorPane.rightAnchor="20.0" AnchorPane.topAnchor="20.0">
-         <children>
-            <Label fx:id="settingsLbl" alignment="CENTER" contentDisplay="CENTER" style="-fx-font-size: 18; -fx-font-weight: bold;" text="Settings">
-               <VBox.margin>
-                  <Insets bottom="45.0" />
-               </VBox.margin></Label>
-            <HBox prefHeight="43.0" spacing="10.0">
-               <children>
-                  <Label style="-fx-font-size: 15; -fx-font-weight: bold;" text="(TEST) Connection: ">
-                     <HBox.margin>
-                        <Insets top="2.0" />
-                     </HBox.margin>
-                  </Label>
-                   <Button fx:id="testConnectionBtn" mnemonicParsing="false" onAction="#settingsTestConnectionBtn" prefHeight="30.0" prefWidth="100.0" style="-fx-background-color: lightblue;" text="TEST">
-                     <HBox.margin>
-                        <Insets />
-                     </HBox.margin></Button>
-                  <Label layoutX="15.0" layoutY="17.0" style="-fx-font-size: 15; -fx-font-weight: bold;" text="Auto ShutDown: ">
-                     <HBox.margin>
-                        <Insets left="200.0" />
-                     </HBox.margin>
-                  </Label>
-                  <RadioButton fx:id="onAutoShutDownBtn" mnemonicParsing="false" onAction="#autoOffCheck" text="On">
-                     <toggleGroup>
-                        <ToggleGroup fx:id="autoShutDownComputer" />
-                     </toggleGroup>
-                  </RadioButton>
-                  <RadioButton fx:id="offAutoShutDownBtn" mnemonicParsing="false" onAction="#autoOffCheck" text="Off" toggleGroup="$autoShutDownComputer" />
-               </children>
-               <VBox.margin>
-                  <Insets />
-               </VBox.margin>
-               <padding>
-                  <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
-               </padding>
+
+        <!-- Main content -->
+        <VBox alignment="TOP_CENTER" spacing="12.0" AnchorPane.bottomAnchor="20.0" AnchorPane.leftAnchor="70.0" AnchorPane.rightAnchor="20.0" AnchorPane.topAnchor="20.0">
+
+            <!-- Title -->
+            <Label style="-fx-font-size: 18; -fx-font-weight: bold;" text="Settings" />
+
+            <!-- Form grid -->
+            <GridPane hgap="12.0" maxWidth="1.7976931348623157E308" vgap="10.0" VBox.vgrow="ALWAYS">
+                <padding><Insets bottom="4" left="4" right="4" top="4" /></padding>
+
+                <!-- Label + field columns -->
+                <columnConstraints>
+                    <ColumnConstraints minWidth="140" prefWidth="180" />
+                    <ColumnConstraints hgrow="ALWAYS" />
+                </columnConstraints>
+
+                <!-- Rows: JSON & Feedback grow -->
+                <rowConstraints>
+                    <RowConstraints />                 <!-- 0: Test Connection -->
+                    <RowConstraints />                 <!-- 1: Auto ShutDown -->
+                    <RowConstraints />                 <!-- 2: Email -->
+                    <RowConstraints vgrow="ALWAYS" />  <!-- 3: JSON Config -->
+                    <RowConstraints vgrow="ALWAYS" />  <!-- 4: Feedback -->
+                </rowConstraints>
+
+                <!-- Row 0: (TEST) Connection -->
+                <Label style="-fx-font-size: 14; -fx-font-weight: bold;" text="(TEST) Connection:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                <HBox alignment="CENTER_LEFT" spacing="12.0" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                    <children>
+                        <Button fx:id="testConnectionBtn" onAction="#settingsTestConnectionBtn" prefHeight="30" prefWidth="120" text="TEST" />
+                    </children>
+                </HBox>
+
+                <!-- Row 1: Auto ShutDown (beside label, not far right) -->
+                <Label style="-fx-font-size: 14; -fx-font-weight: bold;" text="Auto ShutDown:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                <HBox alignment="CENTER_LEFT" spacing="12.0" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                    <children>
+                        <RadioButton fx:id="onAutoShutDownBtn" onAction="#autoOffCheck" text="On">
+                            <toggleGroup><ToggleGroup fx:id="autoShutDownComputer" /></toggleGroup>
+                        </RadioButton>
+                        <RadioButton fx:id="offAutoShutDownBtn" onAction="#autoOffCheck" text="Off" toggleGroup="$autoShutDownComputer" />
+                    </children>
+                </HBox>
+
+                <!-- Row 2: Email -->
+                <Label style="-fx-font-size: 14; -fx-font-weight: bold;" text="Change/Save Email:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                <TextField fx:id="emailField" promptText="name@example.com" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+
+                <!-- Row 3: JSON Config (grows) -->
+                <Label style="-fx-font-size: 14; -fx-font-weight: bold;" text="Login Information:" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+                <TextArea fx:id="getCodeArea" maxWidth="1.7976931348623157E308" promptText="Clcik Login Information show latest db, username, database, email for webpage login" style="-fx-font-family: Consolas, Menlo, 'Courier New', monospace;" wrapText="false" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+
+                <!-- Row 4: Feedback (grows) -->
+                <Label style="-fx-font-size: 14; -fx-font-weight: bold;" text="Feedback:" GridPane.columnIndex="0" GridPane.rowIndex="4" />
+                <TextArea fx:id="feedbackArea" maxWidth="1.7976931348623157E308" promptText="Write your feedback here..." style="-fx-font-family: Consolas, Menlo, 'Courier New', monospace;" wrapText="true" GridPane.columnIndex="1" GridPane.rowIndex="4" />
+            </GridPane>
+
+            <!-- Bottom buttons -->
+            <HBox alignment="CENTER" spacing="12">
+                <children>
+                    <Button fx:id="saveEmailBtn" onAction="#saveEmail" prefWidth="140" text="Save Email" />
+                    <Button fx:id="webpageLoginBtn" onAction="#webpageLogin" prefWidth="140" text="Webpage Login" />
+                    <Button fx:id="getLatestBtn" onAction="#getLatestInfo" prefWidth="140" text="Login Information" />
+                    <Button fx:id="bugBtn" onAction="#settingsBugBtn" prefWidth="140" text="Send Feedback" />
+                </children>
             </HBox>
-            <HBox prefHeight="43.0" spacing="10.0">
-               <children>
-                  <Label style="-fx-font-size: 15; -fx-font-weight: bold;" text="Feedback Bug:">
-                     <HBox.margin>
-                        <Insets top="2.0" />
-                     </HBox.margin>
-                  </Label>
-                  <Button fx:id="bugBtn" mnemonicParsing="false" onAction="#settingsBugBtn" prefHeight="30.0" prefWidth="100.0" style="-fx-background-color: lightblue;" text="SEND">
-                     <HBox.margin>
-                        <Insets left="35.0" />
-                     </HBox.margin>
-                  </Button>
-               </children>
-               <padding>
-                  <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
-               </padding>
-            </HBox>
-            <TextArea fx:id="settingsArea" prefHeight="379.0" prefWidth="706.0">
-               <VBox.margin>
-                  <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
-               </VBox.margin>
-            </TextArea>
-         </children>
-      </VBox>
+
+        </VBox>
     </children>
 </AnchorPane>

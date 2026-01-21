@@ -6,13 +6,14 @@ module org.saw.webcrawler.webcrawler {
     requires javax.mail;
     requires mysql.connector.j;
     requires org.seleniumhq.selenium.chrome_driver;
-    requires org.seleniumhq.selenium.devtools_v137;
     requires org.jsoup;
     requires java.net.http;
-    requires java.desktop;
     requires java.prefs;
-    requires com.google.common;
     requires com.jthemedetector;
+    requires com.sun.jna;
+    requires com.sun.jna.platform;
+    requires org.seleniumhq.selenium.support;
+    requires com.google.common;
 
 
     opens org.saw.webcrawler to javafx.fxml;

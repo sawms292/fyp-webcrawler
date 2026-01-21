@@ -13,7 +13,7 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
-<AnchorPane xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.saw.webcrawler.DatabasePage">
+<AnchorPane  prefHeight="600.0" prefWidth="900.0"  xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.saw.webcrawler.DatabasePage">
 
     <children>
         <AnchorPane prefWidth="50.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.topAnchor="0.0">
@@ -27,7 +27,7 @@
                         </ImageView>
                         <ImageView fx:id="database" fitHeight="30.0" fitWidth="30.0" onMouseClicked="#databaseClick" pickOnBounds="true" preserveRatio="true">
                             <image>
-                                <Image url="@../../../icon/DatabaseSelected.png" />
+                                <Image url="@../../../icon/Database.png" />
                             </image>
                         </ImageView>
                         <ImageView fx:id="settings" fitHeight="30.0" fitWidth="30.0" onMouseClicked="#settingsClick" pickOnBounds="true" preserveRatio="true">
@@ -49,7 +49,7 @@
                     <children>
                         <ComboBox fx:id="monthCb" prefWidth="150.0" promptText="Select Month" />
                         <TextField fx:id="dbSearchFld" alignment="CENTER" promptText="Search by keyword" HBox.hgrow="ALWAYS" />
-                        <Button fx:id="dbSearchBtn" onAction="#searchDatabase" text="Search" />
+                        <Button fx:id="dbClearBtn" onAction="#clearFilters" text="Refresh" />
                     </children>
                 </HBox>
 

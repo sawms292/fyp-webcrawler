@@ -1,5 +1,6 @@
 package org.saw.webcrawler;
 
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -12,7 +13,6 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.MouseEvent;
 import javafx.stage.Stage;
-import org.saw.webcrawler.fxfeatures.DatabaseConnection;
 import org.saw.webcrawler.corefeatures.DbReadWrite;
 import org.saw.webcrawler.fxfeatures.ThemeChecking;
 import org.saw.webcrawler.corefeatures.SearchAndDisplayDatabase;
@@ -21,50 +21,62 @@ import java.io.IOException;
 import java.net.URL;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.ResourceBundle;
 
+/**
+ * database page for history checking
+ */
 public class DatabasePage implements Initializable {
-    private Scene scene;
-    private Stage stage;
-    private FXMLLoader fxmlLoader;
+    /**
+     *  Observable list
+     */
     private ObservableList<SearchAndDisplayDatabase> SearchRecords;
-    private DatabaseConnection databaseConnection = new DatabaseConnection();
+    /**
+     * Database service used to read crawler data.
+     */
     private DbReadWrite dbReadWrite = new DbReadWrite();
+
+    // all about fx for data column(tables), search field, combobox, and button
     @FXML
     private TableView<SearchAndDisplayDatabase> dbTable;
-
     @FXML
     private TableColumn<SearchAndDisplayDatabase, String> colDate;
-
     @FXML
     private TableColumn<SearchAndDisplayDatabase, String> colFound;
-
     @FXML
     private TableColumn<SearchAndDisplayDatabase, String> colKeyword;
-
     @FXML
     private TableColumn<SearchAndDisplayDatabase, Number> colNo;
-
     @FXML
     private TableColumn<SearchAndDisplayDatabase, String> colLink;
-
     @FXML
-    private TableColumn<SearchAndDisplayDatabase, Number> colTimes;
+    private TableColumn<SearchAndDisplayDatabase, String> colTimes;
+
     @FXML
     private TextField dbSearchFld;
     @FXML
-    private Button dbSearchBtn;
+    private Button dbClearBtn;
     @FXML
     private ComboBox<String> monthCb;
-    @FXML
-    private TextArea dbResultArea;
-    ObservableList<String> months = FXCollections.observableArrayList("","January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December");
 
+
+    /**
+     * List of month names used for month filtering
+     */
+    ObservableList<String> months = FXCollections.observableArrayList(
+            "", "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+    );
+
+    /**
+     * @param url the location used to resolve relative paths for the root object (unused)
+     * @param resourceBundle resources used to localize the root object (unused)
+     */
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
         monthCb.setItems(months);
         SearchRecords = FXCollections.observableArrayList();
+
         colKeyword.setCellValueFactory(new PropertyValueFactory<>("searchKeyword"));
         colTimes.setCellValueFactory(new PropertyValueFactory<>("searchTimes"));
         colLink.setCellValueFactory(new PropertyValueFactory<>("searchLink"));
@@ -74,11 +86,7 @@ public class DatabasePage implements Initializable {
             @Override
             protected void updateItem(Number item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty) {
-                    setText(null);
-                } else {
-                    setText(String.valueOf(getIndex() + 1));
-                }
+                setText(empty ? null : String.valueOf(getIndex() + 1));
             }
         });
 
@@ -107,49 +115,43 @@ public class DatabasePage implements Initializable {
         loadData("", "");
     }
 
-    @FXML
-    private void searchDatabase(ActionEvent event) {
-        String keyword = dbSearchFld.getText().trim();
-        String month = monthCb.getValue() == null ? "" : monthCb.getValue();
-        loadData(keyword, month);
+    /**
+     * @param keyword keyword filter (partial match); use empty string for no filter
+     * @param month month name filter (e.g., {@code January}); use empty string for no filter
+     */
+    private void loadData(String keyword, String month) {
+        // Run DB query in background
+        new Thread(() -> {
+            ObservableList<SearchAndDisplayDatabase> tempRecords = FXCollections.observableArrayList();
+
+            try (ResultSet rs = dbReadWrite.searchDatabase(keyword, month)) {
+                while (rs != null && rs.next()) {
+                    tempRecords.add(new SearchAndDisplayDatabase(
+                            rs.getString("keyword"),
+                            rs.getString("times"),
+                            rs.getString("link"),
+                            rs.getBoolean("found") ? "YES" : "NO",
+                            rs.getTimestamp("crawl_time").toString()
+                    ));
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+
+            // safety update TableView
+            javafx.application.Platform.runLater(() -> {
+                SearchRecords.clear();
+                SearchRecords.addAll(tempRecords);
+            });
+        }).start();
     }
 
-private void loadData(String keyword, String month) {
-    // Run DB query in background
-    new Thread(() -> {
-        ObservableList<SearchAndDisplayDatabase> tempRecords = FXCollections.observableArrayList();
-
-        try (ResultSet rs = dbReadWrite.searchDatabase(keyword, month)) {
-            while (rs != null && rs.next()) {
-                tempRecords.add(new SearchAndDisplayDatabase(
-                        rs.getString("keyword"),
-                        rs.getInt("times"),
-                        rs.getString("link"),
-                        rs.getBoolean("found") ? "YES" : "NO",
-                        rs.getTimestamp("crawl_time").toString()
-                ));
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        // Update TableView safely on JavaFX thread
-        javafx.application.Platform.runLater(() -> {
-            SearchRecords.clear();
-            SearchRecords.addAll(tempRecords);
-        });
-    }).start();
-}
-
-
-
+    /**
+     * @param mouseEvent navigation click event
+     * @throws IOException  if the target scene cannot be loaded
+     */
     public void homeClick(MouseEvent mouseEvent) throws IOException {
-//        FXMLLoader fxmlLoader = new FXMLLoader(MainMenu.class.getResource("/org/saw/webcrawler/MainPage.fxml"));
-//        Scene scene = new Scene(fxmlLoader.load());
-//        ThemeChecking.applyTheme(scene);
-//        Stage stage = (Stage) ((Node) mouseEvent.getSource()).getScene().getWindow();
         Stage stage = (Stage) ((Node) mouseEvent.getSource()).getScene().getWindow();
-//        stage.setScene(MainMenu.getMainPageScene());
         boolean wasMaximized = stage.isMaximized();
         double oldWidth = stage.getWidth();
         double oldHeight = stage.getHeight();
@@ -158,23 +160,21 @@ private void loadData(String keyword, String month) {
         stage.setScene(scene);
         stage.setMinWidth(900);
         stage.setMinHeight(600);
-
         if (wasMaximized) {
-            stage.setMaximized(true);
+            Platform.runLater(() -> stage.setMaximized(true));  // re-apply on next pulse
         } else {
             stage.setWidth(oldWidth);
             stage.setHeight(oldHeight);
         }
-//        stage.show();
+
     }
 
+    /**
+     * @param mouseEvent  navigation click event
+     * @throws IOException  if the target scene cannot be loaded
+     */
     public void databaseClick(MouseEvent mouseEvent) throws IOException {
-//        FXMLLoader fxmlLoader = new FXMLLoader(MainMenu.class.getResource("/org/saw/webcrawler/DatabasePage.fxml"));
-//        Scene scene = new Scene(fxmlLoader.load());
-//        ThemeChecking.applyTheme(scene);
-//        Stage stage = (Stage) ((Node) mouseEvent.getSource()).getScene().getWindow();
         Stage stage = (Stage) ((Node) mouseEvent.getSource()).getScene().getWindow();
-//        stage.setScene(MainMenu.getDatabasePageScene());
         boolean wasMaximized = stage.isMaximized();
         double oldWidth = stage.getWidth();
         double oldHeight = stage.getHeight();
@@ -183,23 +183,21 @@ private void loadData(String keyword, String month) {
         stage.setScene(scene);
         stage.setMinWidth(900);
         stage.setMinHeight(600);
-
         if (wasMaximized) {
-            stage.setMaximized(true);
+            Platform.runLater(() -> stage.setMaximized(true));  // re-apply on next pulse
         } else {
             stage.setWidth(oldWidth);
             stage.setHeight(oldHeight);
         }
-//        stage.show();
+
     }
 
+    /**
+     * @param mouseEvent  navigation click event
+     * @throws IOException if the target scene cannot be loaded
+     */
     public void settingsClick(MouseEvent mouseEvent) throws IOException {
-//        FXMLLoader fxmlLoader = new FXMLLoader(MainMenu.class.getResource("/org/saw/webcrawler/SettingsPage.fxml"));
-//        Scene scene = new Scene(fxmlLoader.load());
-//        ThemeChecking.applyTheme(scene);
-//        Stage stage = (Stage) ((Node) mouseEvent.getSource()).getScene().getWindow();
         Stage stage = (Stage) ((Node) mouseEvent.getSource()).getScene().getWindow();
-//        stage.setScene(MainMenu.getSettingsPageScene());
         boolean wasMaximized = stage.isMaximized();
         double oldWidth = stage.getWidth();
         double oldHeight = stage.getHeight();
@@ -209,16 +207,20 @@ private void loadData(String keyword, String month) {
         stage.setMinWidth(900);
         stage.setMinHeight(600);
         if (wasMaximized) {
-            stage.setMaximized(true);
+            Platform.runLater(() -> stage.setMaximized(true));  // re-apply on next pulse
         } else {
             stage.setWidth(oldWidth);
             stage.setHeight(oldHeight);
         }
-//        stage.show();
+
     }
 
-
-
-
+    /**
+     * @param actionEvent clear + refresh button
+     */
+    public void clearFilters(ActionEvent actionEvent) {
+        dbSearchFld.clear();
+        monthCb.getSelectionModel().clearSelection();
+        loadData("", "");
+    }
 }
-

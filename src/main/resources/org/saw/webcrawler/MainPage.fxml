@@ -22,7 +22,7 @@
                     <children>
                         <ImageView fx:id="home" fitHeight="30.0" fitWidth="30.0" onMouseClicked="#homeClick" pickOnBounds="true" preserveRatio="true">
                             <image>
-                                <Image url="@../../../icon/HomeSelected.png" />
+                                <Image url="@../../../icon/Home.png" />
                             </image>
                         </ImageView>
                         <ImageView fx:id="database" fitHeight="30.0" fitWidth="30.0" onMouseClicked="#databaseClick" pickOnBounds="true" preserveRatio="true">
@@ -55,9 +55,9 @@
                 <ProgressBar fx:id="progressBar" maxWidth="1.7976931348623157E308" prefWidth="800.0" progress="0.0" />
                 <HBox spacing="10.0">
                     <children>
-                        <Button fx:id="startBtn" mnemonicParsing="false" onAction="#startCrawlingBtn" style="-fx-background-color: lightgreen;" text="Start" />
-                        <Button fx:id="stopBtn" disable="true" mnemonicParsing="false" onAction="#stopCrawlingBtn" text="Stop" />
-                  <Button fx:id="clearBtn" mnemonicParsing="false" onAction="#clearTextBtn" style="-fx-background-color: lightblue;" text="Clear" />
+                        <Button fx:id="startBtn" mnemonicParsing="false" onAction="#startCrawlingBtn" style="-fx-background-color: #009a00;" text="Start" />
+                        <Button fx:id="stopBtn" disable="true" mnemonicParsing="false" onAction="#stopCrawlingBtn" style="-fx-background-color: #a52a2a;" text="Stop" />
+                  <Button fx:id="clearBtn" mnemonicParsing="false" onAction="#clearTextBtn" style="-fx-background-color: #6666ff;" text="Clear" />
                   <Spinner fx:id="numberSp" prefHeight="26.0" prefWidth="96.0" />
                     </children>
                 </HBox>

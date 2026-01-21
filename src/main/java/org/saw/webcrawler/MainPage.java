@@ -7,7 +7,6 @@ import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -24,24 +23,28 @@ import java.io.IOException;
 import java.net.URL;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.*;
 
+/**
+ * The main pages that run the crawler
+ */
 public class MainPage implements Initializable {
     public AnchorPane rootPane;
-    private Scene scene;
-    private Stage stage;
-    private FXMLLoader fxmlLoader;
     private InputCheck crawler;
     private HttpCheck httpCheck;
     private AutoShutDown autoShutDown;
-    private KeyMatch keyMatch; // Add KeyMatch for parallel keyword checking
+    private KeyMatch keyMatch;
     private HashSet<String> crawledUrls;
     private Queue<String> queue;
     private volatile boolean stopRequested = false;
     private Thread crawlThread;
     private Task<Void> crawlTask;
     private ObservableList<DisplayCrawlerResult> DisplayRecords;
-    private DbReadWrite dbReadWrite = new DbReadWrite();
+    private DbReadWrite dbReadWrite;
+    private final DatabaseConnection databaseConnection = new DatabaseConnection();
+    private Timestamp currentRunStart;
+    private int pagesSavedThisRun = 0;
 
     //    getter
     public HashSet<String> getCrawledUrls() {
@@ -62,8 +65,6 @@ public class MainPage implements Initializable {
     private Label statusLbl;
     @FXML
     private ProgressBar progressBar;
-//    @FXML
-//    private TextArea outputArea;
     @FXML
     private Button stopBtn;
     @FXML
@@ -83,14 +84,45 @@ public class MainPage implements Initializable {
     @FXML
     private TableColumn<DisplayCrawlerResult, String> colLink;
     @FXML
-    private TableColumn<DisplayCrawlerResult, Number> colTimes;
+    private TableColumn<DisplayCrawlerResult, String> colTimes;
 
-
+    /**
+     * @param url unused
+     * @param resourceBundle unused
+     */
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
         SpinnerValueFactory<Integer> valueFactory =
                 new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 10000, 1);
+        valueFactory.setConverter(new javafx.util.StringConverter<Integer>() {
+            @Override
+            public String toString(Integer value) {
+                return value == null ? "" : value.toString();
+            }
+
+            @Override
+            public Integer fromString(String text) {
+                if (text == null || text.trim().isEmpty()) {
+                    return valueFactory.getValue();
+                }
+
+                try {
+                    int v = Integer.parseInt(text.trim());
+
+                    if (v <= 0) {
+                        return valueFactory.getValue();
+                    }
+
+                    return v;
+
+                } catch (NumberFormatException e) {
+                    return valueFactory.getValue();
+                }
+            }
+        });
+
         numberSp.setValueFactory(valueFactory);
+        numberSp.setEditable(true);
         crawler = new InputCheck();
         crawledUrls = new HashSet<>();
         httpCheck = new HttpCheck();
@@ -122,106 +154,79 @@ public class MainPage implements Initializable {
         colTimes.prefWidthProperty().bind(dbTable.widthProperty().multiply(0.10));
         colLink.prefWidthProperty().bind(dbTable.widthProperty().multiply(0.45));
         colDate.prefWidthProperty().bind(dbTable.widthProperty().multiply(0.20));
-        loadData("", "");
+
         disableAllInputs(true);
+
         Task<Void> monitorTask = new Task<>() {
             @Override
             protected Void call() throws Exception {
                 int retry = 0;
-//              Wait for cloudflared tunnel
-                updateMessage("Checking tunnel connection...");
 
-//                https://www.youtube.com/watch?v=7OPvC6we5-o
-                Platform.runLater(() ->{
-                        statusLbl.setStyle("-fx-text-fill: orange;");
-                        progressBar.lookup(".bar").setStyle("-fx-accent: orange;");
-                });
+                setStatus("Checking connection…", "orange"); // STATUS A1
                 updateProgress(-1, 1);
 
-                while (!CloudflaredConnection.tunnelExists()) {
+                // Database readiness loop
+                boolean checkDatabase = false;
+                while (!checkDatabase) {
                     retry++;
-                    updateMessage(retry + " Try : Starting tunnel...");
-                    Platform.runLater(() ->{
-                        statusLbl.setStyle("-fx-text-fill: orange;");
-                    });
-                    Thread.sleep(2000);
-                }
+                    try {
+                        setStatus("Checking database… (try " + retry + ")", "orange");
+//                        DatabaseConnection dbConn = new DatabaseConnection();
+//                        checkDatabase = dbConn.checkingUser();
+                        checkDatabase = databaseConnection.checkingUser();
+                        if (checkDatabase) {
+                            setStatus("Database ready", "green");
+                            updateProgress(1, 1);
 
-                if(CloudflaredConnection.tunnelExists()) {
-                    updateMessage("Tunnel connection started");
-                    updateProgress(0.5, 1);
-                    Platform.runLater(() ->{
-                            statusLbl.setStyle("-fx-text-fill: orange");
-                            progressBar.lookup(".bar").setStyle("-fx-accent: orange;");
-                    });
-                    Thread.sleep(2000);
-                    retry = 0;
-
-//                    Check Database
-                    boolean checkDatabase = false;
-                    while (!checkDatabase) {
-                        retry++;
-                        try {
-                            updateMessage(retry + " Try : Checking database connection & Create database...");
-                            DatabaseConnection dbConn = new DatabaseConnection();
-                            checkDatabase = dbConn.checkingUser();
-                            if (checkDatabase) {
-                                updateMessage("Database ready..");
-                                updateProgress(1, 1);
-                                Platform.runLater(() -> {
-                                    statusLbl.setStyle("-fx-text-fill: green");
-                                    progressBar.lookup(".bar").setStyle("-fx-accent: green;");
-                                });
-                                disableAllInputs(false);
-                            } else {
-                                updateMessage("Database not ready.. Try again... : " +retry);
-                                updateProgress(0.5, 1);
-                                Platform.runLater(() ->{
-                                            statusLbl.setStyle("-fx-text-fill: orange");
-                                    progressBar.lookup(".bar").setStyle("-fx-accent: orange;");
-                                });
-                                Thread.sleep(1000);
+                            try {
+                                dbReadWrite = new DbReadWrite();
+                            } catch (Exception e) {
+                                setStatus("Database init failed", "red");
+                                return null;
                             }
-                        } catch (Exception e) {
-                            retry++;
-                            updateMessage("Database error... Try again... : " + retry);
+                            disableAllInputs(false);
+
+                        } else {
+                            setStatus("Database not ready… retrying (" + retry + ")", "orange");
                             updateProgress(0.5, 1);
-                            Platform.runLater(() ->{
-                                statusLbl.setStyle("-fx-text-fill: red");
-                                progressBar.lookup(".bar").setStyle("-fx-accent: red;");
-                                    });
                             Thread.sleep(1000);
                         }
+                    } catch (Exception e) {
+                        setStatus("Database error… retrying (" + retry + ")", "red");
+                        Thread.sleep(1000);
                     }
-                }else{
-                    updateMessage("Tunnel connection failed");
-                    Platform.runLater(() ->{
-                        statusLbl.setStyle("-fx-text-fill: red");
-                    });
                 }
                 return null;
             }
         };
-        statusLbl.textProperty().bind(monitorTask.messageProperty());
         progressBar.progressProperty().bind(monitorTask.progressProperty());
         Thread t = new Thread(monitorTask, "Tunnel-Monitor");
         t.setDaemon(true);
         t.start();
     }
 
+    /**
+     * @param keyword keyword filter used during the current run
+     * @param url base URL filter used during the current run
+     */
     @FXML
     private void readDatabase(String keyword, String url) {
-        loadData(keyword, url);
+        loadData(keyword, url, currentRunStart);
     }
 
-    private void loadData(String keyword, String url) {
+    /**
+     * @param keyword keyword filter; may be empty for no filter
+     * @param url URL filter applied to {@code link_default}; may be empty for no filter
+     * @param runStart optional earliest crawl time; may be null to include all rows
+     */
+    private void loadData(String keyword, String url, Timestamp runStart) {
         DisplayRecords.clear();
 
-        try (ResultSet rs = dbReadWrite.readDatabase(keyword, url)) {
+        try (ResultSet rs = dbReadWrite.readDatabase(keyword, url, runStart)) {
             while (rs != null && rs.next()) {
                 DisplayRecords.add(new DisplayCrawlerResult(
                         rs.getString("keyword"),
-                        rs.getInt("times"),
+                        rs.getString("times"),
                         rs.getString("link"),
                         rs.getTimestamp("crawl_time").toString()
                 ));
@@ -232,6 +237,9 @@ public class MainPage implements Initializable {
         }
     }
 
+    /**
+     * @param disable if db have issues will try to prevent it using
+     */
     private void disableAllInputs(boolean disable) {
         keywordFld.setDisable(disable);
         urlFld.setDisable(disable);
@@ -244,13 +252,7 @@ public class MainPage implements Initializable {
         settings.setDisable(disable);
     }
 
-
-
     public void homeClick(MouseEvent mouseEvent) throws IOException {
-//        fxmlLoader = new FXMLLoader(MainMenu.class.getResource("/org/saw/demo/MainPage.fxml"));
-//        Scene scene = new Scene(fxmlLoader.load());
-//        ThemeChecking.applyTheme(scene);
-//        Stage stage = (Stage) ((Node) mouseEvent.getSource()).getScene().getWindow();
         Stage stage = (Stage) ((Node) mouseEvent.getSource()).getScene().getWindow();
         boolean wasMaximized = stage.isMaximized();
         double oldWidth = stage.getWidth();
@@ -261,19 +263,15 @@ public class MainPage implements Initializable {
         stage.setMinWidth(900);
         stage.setMinHeight(600);
         if (wasMaximized) {
-            stage.setMaximized(true);
+            Platform.runLater(() -> stage.setMaximized(true));
         } else {
             stage.setWidth(oldWidth);
             stage.setHeight(oldHeight);
         }
-//        stage.show();
+
     }
 
     public void databaseClick(MouseEvent mouseEvent) throws IOException {
-//        fxmlLoader = new FXMLLoader(MainMenu.class.getResource("/org/saw/webcrawler/DatabasePage.fxml"));
-//        Scene scene = new Scene(fxmlLoader.load());
-//        ThemeChecking.applyTheme(scene);
-//        Stage stage = (Stage) ((Node) mouseEvent.getSource()).getScene().getWindow();
         Stage stage = (Stage) ((Node) mouseEvent.getSource()).getScene().getWindow();
         boolean wasMaximized = stage.isMaximized();
         double oldWidth = stage.getWidth();
@@ -284,19 +282,15 @@ public class MainPage implements Initializable {
         stage.setMinWidth(900);
         stage.setMinHeight(600);
         if (wasMaximized) {
-            stage.setMaximized(true);
+            Platform.runLater(() -> stage.setMaximized(true));
         } else {
             stage.setWidth(oldWidth);
             stage.setHeight(oldHeight);
         }
-//        stage.show();
+
     }
 
     public void settingsClick(MouseEvent mouseEvent) throws IOException {
-//        fxmlLoader = new FXMLLoader(MainMenu.class.getResource("/org/saw/webcrawler/SettingsPage.fxml"));
-//        Scene scene = new Scene(fxmlLoader.load());
-//        ThemeChecking.applyTheme(scene);
-//        Stage stage = (Stage) ((Node) mouseEvent.getSource()).getScene().getWindow();
         Stage stage = (Stage) ((Node) mouseEvent.getSource()).getScene().getWindow();
         boolean wasMaximized = stage.isMaximized();
         double oldWidth = stage.getWidth();
@@ -307,123 +301,193 @@ public class MainPage implements Initializable {
         stage.setMinWidth(900);
         stage.setMinHeight(600);
         if (wasMaximized) {
-            stage.setMaximized(true);
+            Platform.runLater(() -> stage.setMaximized(true));
         } else {
             stage.setWidth(oldWidth);
             stage.setHeight(oldHeight);
         }
-//        stage.show();
+
     }
 
+    /**
+     * @param num input string
+     * @return if true is a positive integer, else is negative and can't run
+     */
+    public boolean isInteger(String num) {
+       Integer numChecking;
+        try{
+           numChecking = Integer.parseInt(String.valueOf(num));
+            if(numChecking <= 0) {return false;}
+            if(numChecking == null){return false;}
+            return true;
+        } catch (NumberFormatException | NullPointerException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Shows a warning alert to inform the user that the crawl number is invalid
+     */
+    private void showInvalidNumberAlert() {
+        Platform.runLater(() -> {
+        Alert alert = new Alert(Alert.AlertType.WARNING);
+        alert.setTitle("Invalid Number");
+        alert.setHeaderText("Notification");
+        alert.setContentText("Crawling number must be a positive value (greater than zero)!");
+        alert.showAndWait();
+        });
+    }
+
+
+    /**
+     * @param actionEvent start crawler web pages
+     */
     public void startCrawlingBtn(ActionEvent actionEvent) {
         String keyword = keywordFld.getText();
-        String url = urlFld.getText();
-        int number = (int) numberSp.getValue();
+        String protocolUrl = urlFld.getText();
+        String url;
+        if (protocolUrl.startsWith("http://") || protocolUrl.startsWith("https://")) {
+            url = protocolUrl;
+        } else {
+            url = "http://" + protocolUrl;
+        }
 
-        if(!crawler.isValidInput(keyword, url, number)) {
+        String rawValue = numberSp.getEditor().getText();
+
+        if(isInteger(rawValue) == false) {
+            showInvalidNumberAlert();
+            return;
+        }
+        int number = Integer.parseInt(rawValue.trim());
+
+        String savedEmail = databaseConnection.fetchEmail();
+        // optional: show a tiny confirmation
+        if (savedEmail == null || savedEmail.isBlank()) {
                 Alert alert = new Alert(Alert.AlertType.WARNING);
                 alert.setTitle("Input Required");
                 alert.setHeaderText("Notification");
-                alert.setContentText("Crawling number, URL and Keyword Input Required!");
+                alert.setContentText("Please go to Settings Page insert your email and click saved email button!");
                 alert.showAndWait();
+                return;
         }
 
-        if(!CloudflaredConnection.tunnelExists()){
+        if(url.trim().contains(" ")) {
             Alert alert = new Alert(Alert.AlertType.WARNING);
-            alert.setTitle("Tunnel Not Found");
-            alert.setHeaderText("Tunnel Not Found");
-            alert.setContentText("Tunnel Maybe still startup.. Please wait few seconds!");
+            alert.setTitle("Invalid URL");
+            alert.setHeaderText("Notification");
+            alert.setContentText("URL should not contain spaces and only one URL!");
+            alert.showAndWait();
+            return;
         }
 
-        if(crawler.isValidInput(keyword, url, number)) {
-            try{
-                boolean checkUrl = httpCheck.checkAccess(url);
-//                boolean checkDatabase = new DatabaseConnection().checkingUser();
+        if (!crawler.isValidInput(keyword, url, number)) {
+            Alert alert = new Alert(Alert.AlertType.WARNING);
+            alert.setTitle("Input Required");
+            alert.setHeaderText("Notification");
+            alert.setContentText("Crawling number, URL and Keyword Input Required!");
+            alert.showAndWait();
+            return;
+        }
 
-                if(checkUrl) {
+        if (crawler.isValidInput(keyword, url, number)) {
+            try {
+                boolean checkUrl = httpCheck.checkAccess(url);
+
+                if (checkUrl) {
                     URL uri = new URL(url);
                     String host = uri.getHost();
                     InternetDomainName domainName = InternetDomainName.from(host).topPrivateDomain();
                     HTagRemove.baseUrl = domainName.toString();
                     String urlDomain = domainName.toString();
                     stopBtn.setDisable(false);
-                    clearBtn.setDisable(false);
+                    clearBtn.setDisable(true);
                     startBtn.setDisable(true);
                     progressBar.progressProperty().unbind();
-                    statusLbl.textProperty().unbind();
-                    statusLbl.setText("Status: Crawling");
+                    setStatus("Status: Crawling", "blue");
 
                     stopRequested = false;
+                    currentRunStart = new Timestamp(System.currentTimeMillis());
+                    pagesSavedThisRun = 0;
 
                     crawlTask = new Task<>() {
                         @Override
                         protected Void call() throws Exception {
-                            updateProgress(0, 100);
-                            updateMessage("Starting keyword analysis...");
-                            queue.clear();
-                            crawledUrls.clear();
-                            queue.add(url);
+                            try {
+                                updateProgress(0, 100);
+                                setStatus("Starting keyword analysis…", "blue");
+                                queue.clear();
+                                crawledUrls.clear();
+                                queue.add(url);
 
-                            int limit = number;
-                            int count = 0;
+                                int limit = number;
+                                int count = 0;
 
-                            while (!queue.isEmpty() && count < limit && !isCancelled() && !stopRequested) {
-                                String currentUrl = queue.poll();
-                                if (crawledUrls.contains(currentUrl)) {
-                                    continue;
-                                }
-                                crawledUrls.add(currentUrl);
-                                updateMessage("Crawling: " + currentUrl);
-                                // Use your ForkJoin KeyMatch to check if the website contains the keyword
-                                KeyMatch.KeywordResult result = keyMatch.checkWebsiteForKeyword(currentUrl, keyword);
-                                DbReadWrite dbRW = new DbReadWrite();
-                                dbRW.saveDatabase(keyword, result.getMatchCount(), currentUrl, urlDomain, url,null, result.isFound());
-                                for(String newLink : HTagRemove.getFoundLinks()){
-                                    if(!crawledUrls.contains(newLink)){
-                                        queue.add(newLink);
+                                while (!queue.isEmpty() && count < limit && !isCancelled() && !stopRequested) {
+                                    String currentUrl = queue.poll();
+                                    if (crawledUrls.contains(currentUrl)) {
+                                        continue;
+                                    }
+                                    crawledUrls.add(currentUrl);
+                                    setStatus("Crawling: " + currentUrl, "blue");
+
+
+                                    KeyMatch.KeywordResult result = keyMatch.checkWebsiteForKeyword(currentUrl, keyword);
+
+                                    setStatus("Saving to database…", "yellow");
+                                    dbReadWrite.saveDatabase(
+                                            keyword,
+                                            result.getTimesJson(),
+                                            currentUrl,
+                                            urlDomain,
+                                            url,
+                                            result.isFound());
+                                    pagesSavedThisRun++;
+
+                                    for (String newLink : HTagRemove.getFoundLinks()) {
+                                        if (!crawledUrls.contains(newLink)) {
+                                            queue.add(newLink);
+                                        }
+                                    }
+
+                                    count++;
+                                    updateProgress(count, limit);
+
+                                    setStatus("Saved. Discovering new links…", "yellow");
+
+                                    try {
+                                        Thread.sleep(100);
+                                    } catch (InterruptedException e) {
+                                        if (isCancelled() || stopRequested) {
+                                            progressBar.progressProperty().unbind();
+                                            setStatus("Crawling Stopped", "red");
+                                            break;
+                                        }
                                     }
                                 }
-                                System.out.println("Unique links in mainpage crawledUrls: " + queue.size());
-                                for (String test : queue) {
-                                    System.out.println(test);
-                                }
-                                count++;
-                                // Update progress
-                                updateProgress(count, limit);
-
-                                try {
-                                    Thread.sleep(100);
-                                } catch (InterruptedException e) {
-                                    if (isCancelled() || stopRequested) break;
-                                }
-                            }
-
-                            // Simulate additional processing time
-                            for (int i = 50; i <= 100; i += 10) {
-                                Thread.sleep(100);
-                                updateProgress(i, 100);
-                            }
-
                             return null;
+                            } finally {
+                                if (!isCancelled() && !stopRequested) {
+                                    HTagRemove.getFoundLinks().clear();
+                                    HTagRemove.closeSharedDriver();
+                                }
+                            }
                         }
 
                         @Override
                         protected void succeeded() {
                             super.succeeded();
-                            statusLbl.setText("✓ Keyword Analysis Complete");
+                            setStatus("✓ Keyword Analysis Complete", "green");
                             stopBtn.setDisable(true);
                             clearBtn.setDisable(false);
                             startBtn.setDisable(false);
-                            readDatabase(keyword,url);
+                            readDatabase(keyword, url);
                             HTagRemove.getFoundLinks().clear();
-//                            DbReadWrite dbRW = new DbReadWrite();
-//                            String dbOutput = dbRW.readDatabase(keyword,urlDomain);
-//                            outputArea.setText("--- Database Results ---\n" + dbOutput);
+                            HTagRemove.closeSharedDriver();
+
 
                             if (autoShutDown.isAutoShutdownEnabled()) {
                                 new Thread(() -> {
-                                    try {
-                                        Thread.sleep(3000);
+                                    try {                                        Thread.sleep(3000);
                                         autoShutDown.shutdown();
                                     } catch (InterruptedException | IOException e) {
                                         e.printStackTrace();
@@ -435,47 +499,60 @@ public class MainPage implements Initializable {
                         @Override
                         protected void failed() {
                             super.failed();
-                            statusLbl.setText("Crawling Failed");
+                            setStatus("Crawling Failed", "red");
                         }
 
                         @Override
                         protected void cancelled() {
                             super.cancelled();
-                            statusLbl.setText("Crawling Cancelled");
+                            setStatus("Crawling Cancelled", "red");
+
+                            stopBtn.setDisable(true);
+                            startBtn.setDisable(false);
+                            clearBtn.setDisable(false);
+
+                            if (pagesSavedThisRun > 0) {
+                                readDatabase(keyword, url);
+                            } else {
+                                DisplayRecords.clear();
+                            }
+
+                            HTagRemove.getFoundLinks().clear();
+                            HTagRemove.closeSharedDriver();
                         }
                     };
 
-                    // Bind progress bar to task
                     progressBar.progressProperty().bind(crawlTask.progressProperty());
 
-                    // Start task in a new thread
-//                    new Thread(crawlTask).start();
                     crawlThread = new Thread(crawlTask, "Crawler-Thread");
                     crawlThread.setDaemon(true);
                     crawlThread.start();
 
-                }else{
+                } else {
                     String convertCheckUrl = checkUrl ? "True" : "False";
-//                    String convertCheckDatabase = checkDatabase ? "True" : "False";
+                    setStatus("URL access failed", "red");
                     Alert alert = new Alert(Alert.AlertType.WARNING);
                     alert.setTitle("URL/Database Problem");
                     alert.setHeaderText("Notification");
-                    alert.setContentText("Status For URL Access: " + convertCheckUrl );
+                    alert.setContentText("Status For URL Access: " + convertCheckUrl);
                     alert.showAndWait();
                 }
-            }catch(IOException e){
+            } catch (IOException e) {
                 e.printStackTrace();
             }
         }
     }
 
+    /**
+     * @param actionEvent to manually stop the crawler
+     */
     public void stopCrawlingBtn(ActionEvent actionEvent) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Stop Crawling");
         alert.setHeaderText("Notification");
         alert.setContentText("Progress will be stop it and cant resume!\nAre you sure you want to stop Crawling?");
         Optional<ButtonType> result = alert.showAndWait();
-        if(result.get() == ButtonType.OK){
+        if (result.get() == ButtonType.OK) {
             stopRequested = true;
             if (crawlTask != null && crawlTask.isRunning()) {
                 crawlTask.cancel();
@@ -486,16 +563,20 @@ public class MainPage implements Initializable {
             clearBtn.setDisable(false);
             startBtn.setDisable(false);
             stopBtn.setDisable(true);
-            clearTextBtn(actionEvent);
-            statusLbl.textProperty().unbind();
-            statusLbl.setText("Crawling Stopped");
+//            clearTextBtn(actionEvent);
+//            progressBar.progressProperty().unbind();
+            setStatus("Crawling Stopped", "red");
         }
-
     }
 
-
+    /**
+     * @param actionEvent clear the main page input, url, results
+     */
     public void clearTextBtn(ActionEvent actionEvent) {
-//        stopRequested = false;
+        stopRequested = true;
+        if (crawlTask != null && crawlTask.isRunning()) {
+            crawlTask.cancel();
+        }
         if (crawlThread != null && crawlThread.isAlive()) {
             crawlThread.interrupt();
         }
@@ -504,38 +585,43 @@ public class MainPage implements Initializable {
         queue.clear();
         crawledUrls.clear();
         DisplayRecords.clear();
-//        dbTable.getItems().clear();
-//        dbTable.getColumns().clear();
-        stopRequested = false;
+        currentRunStart = null;
+        pagesSavedThisRun = 0;
         keywordFld.clear();
         urlFld.clear();
-        statusLbl.textProperty().unbind();
-        statusLbl.setStyle("-fx-text-fill: Red;");
-        statusLbl.setText("Status: Clear");
-
+        setStatus("Status: Clear", "red");
         new Thread(() -> {
-                    try {
-            Thread.sleep(5000);
-        }catch(InterruptedException e){
-            e.printStackTrace();
-        }
+            try {
+                Thread.sleep(4000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
             Platform.runLater(() -> {
                 if ("Status: Clear".equals(statusLbl.getText())) {
-                    statusLbl.textProperty().unbind();
-                    statusLbl.setStyle("-fx-text-fill: green;");
-                    statusLbl.setText("Status: Waiting for input");
+                    setStatus("Status: Waiting for input", "green");
                 }
             });
         }).start();
+
         numberSp.getValueFactory().setValue(1);
         SpinnerValueFactory<Integer> valueFactory =
                 new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 10000, 1);
         numberSp.setValueFactory(valueFactory);
-//        https://stackoverflow.com/questions/18517161/javafx-progress-cannot-be-to-solve-a-variable/18519587
         progressBar.progressProperty().unbind();
         progressBar.setProgress(0.0);
-
     }
 
+    /**
+     * @param text  status message to display
+     * @param color difference color difference situation
+     */
+    private void setStatus(String text, String color) {
+        Platform.runLater(() -> {
+            statusLbl.textProperty().unbind();
+            statusLbl.setText(text);
+            statusLbl.setStyle("-fx-text-fill: " + color + ";");
+            progressBar.setStyle("-fx-accent: " + color + ";");
+        });
+    }
 
 }
