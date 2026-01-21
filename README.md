@@ -22,21 +22,21 @@ A JavaFX desktop application that crawls websites, searches for a keyword on eac
 ### Main Page
 Run crawler tasks and view results from the current crawl session.
 
-<img width="900" alt="Main Page" src="Output/Mainpage.png" />
+<img width="900" alt="Main Page" src="output/Mainpage.png" />
 
 ---
 
 ### Database Page
 View and search stored crawl records, with optional month filtering.
 
-<img width="900" alt="Database Page" src="Output/DatabasePage.png" />
+<img width="900" alt="Database Page" src="output/DatabasePage.png" />
 
 ---
 
 ### Settings Page
 Save email address, enable auto shutdown, submit feedback, and access login/website URLs.
 
-<img width="1000" alt="Settings Page" src="Output/SettingsPage.png" />
+<img width="1000" alt="Settings Page" src="output/SettingsPage.png" />
 
 ---
 
