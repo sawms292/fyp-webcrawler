@@ -40,7 +40,7 @@ Save email address, enable auto shutdown, submit feedback, and access login/webs
 
 ---
 
-## How It Works (High Level)
+## How It Works
 
 1. User enters a **keyword**, **start URL**, and **page limit**
 2. Application checks URL accessibility
@@ -61,10 +61,6 @@ Save email address, enable auto shutdown, submit feedback, and access login/webs
 - Selenium (ChromeDriver)
 - Jsoup
 - MySQL (JDBC Driver)
-- Guava (`InternetDomainName`)
-- JNA (Windows title bar dark mode support)
-- Java Preferences API (SaveSettings)
-- JavaMail (email logging and bug reporting)
 
 ---
 
