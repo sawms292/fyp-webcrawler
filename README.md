@@ -59,7 +59,6 @@ Save email address, enable auto shutdown, submit feedback, and access login/webs
 - Java 17+
 - JavaFX
 - Selenium (ChromeDriver)
-- Jsoup
 - MySQL (JDBC Driver)
 
 ---
